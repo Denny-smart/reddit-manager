@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>All Posts</h2>
+
+  {% if posts %}
+    <ul>
+      {% for post in posts %}
+        <li>
+          <strong>{{ post.title }}</strong> <br>
+          {{ post.content|truncatewords:20 }} <br>
+          <small>By {{ post.user.username }} on {{ post.created_at }}</small>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No posts yet.</p>
+  {% endif %}
+{% endblock %}
