@@ -3,9 +3,9 @@
 {% block content %}
   <h2>Login</h2>
   <form method="post">
-      {% csrf_token %}   <!-- 👈 This is required -->
+      {% csrf_token %}
       {{ form.as_p }}
       <button type="submit">Login</button>
   </form>
-  <p>Don’t have an account? <a href="{% url 'signup' %}">Sign up here</a></p>
+  <p>Don’t have an account? <a href="{% url 'users:signup' %}">Sign up here</a></p>
 {% endblock %}

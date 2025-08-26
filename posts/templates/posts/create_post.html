@@ -1,6 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
 <h2>Create Post</h2>
+
 <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
+    {{ form.non_field_errors }}
+    <p>
+        {{ form.title.label_tag }}<br>
+        {{ form.title }}
+    </p>
+    <p>
+        {{ form.content.label_tag }}<br>
+        {{ form.content }}
+    </p>
+    <p>
+        {{ form.subreddit.label_tag }}<br>
+        {{ form.subreddit }}
+    </p>
+    <p>
+        {{ form.reddit_account.label_tag }}<br>
+        {{ form.reddit_account }}
+    </p>
+    <p>
+        {{ form.post_now }} {{ form.post_now.label_tag }}
+    </p>
+    <p>
+        {{ form.scheduled_time.label_tag }}<br>
+        {{ form.scheduled_time }}
+    </p>
+
     <button type="submit">Save</button>
 </form>
+
+<p><a href="{% url 'posts:post_list' %}">Back to posts</a></p>
+
+<script>
+  // Optional tiny JS: hide/show scheduled_time when post_now is checked/unchecked
+  const postNow = document.querySelector('[name="post_now"]');
+  const scheduledInput = document.querySelector('[name="scheduled_time"]');
+  function toggleScheduled(){
+    if(postNow && scheduledInput){
+      scheduledInput.parentElement.style.display = postNow.checked ? 'none' : '';
+    }
+  }
+  if(postNow){ postNow.addEventListener('change', toggleScheduled); toggleScheduled(); }
+</script>
+{% endblock %}
