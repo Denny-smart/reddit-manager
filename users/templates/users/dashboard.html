@@ -9,4 +9,12 @@
   {% else %}
     <p>✅ You can create and submit posts.</p>
   {% endif %}
+
+  <ul>
+    {% if request.user.profile.role == "ADMIN" %}
+      <li><a href="{% url 'reddit_accounts:list' %}">Manage Reddit Accounts</a></li>
+    {% endif %}
+    <li><a href="{% url 'posts:create_post' %}">Create a Post</a></li>
+    <li><a href="{% url 'posts:post_list' %}">View Your Posts</a></li>
+  </ul>
 {% endblock %}

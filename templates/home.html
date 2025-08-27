@@ -2,12 +2,10 @@
 
 {% block content %}
 <h2>Welcome to Reddit Manager 🎉</h2>
-<p>Select what you’d like to do:</p>
+<p>Please sign up or log in to continue:</p>
 
 <ul>
-    <li><a href="{% url 'reddit_accounts:list' %}">Manage Reddit Accounts</a></li>
-    <li><a href="{% url 'posts:create_post' %}">Create a Post</a></li>
-    <li><a href="{% url 'posts:post_list' %}">View Your Posts</a></li>
-    <li><a href="{% url 'users:dashboard' %}">User Dashboard</a></li>
+    <li><a href="{% url 'users:signup' %}">Sign Up</a></li>
+    <li><a href="{% url 'users:login' %}">Login</a></li>
 </ul>
 {% endblock %}
