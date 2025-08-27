@@ -1,45 +1,83 @@
 # Reddit Manager
 
-A simple web application that helps users manage their Reddit activity more easily. Instead of logging in and posting manually every time, this tool lets you connect your Reddit account and schedule or send posts through a simple interface.
+This project is a Reddit Post Manager that allows users to authenticate their Reddit accounts, create and schedule posts, and manage multiple Reddit accounts from a single platform. It simplifies the process of posting to subreddits, saving users time while ensuring better account and post management.
 
-Think of it like a **helper app** that makes posting to Reddit faster and more organized.
+## 🌟 Key Features
 
-## Features
+* **Feature A:** User Authentication: Secure signup, login, and logout with JWT and OAuth2.0.
+* **Feature B:** Reddit Account Integration: Connect and manage multiple Reddit accounts via Auth0 & Reddit API (PRAW).
+* **Feature C:** Post Management: Create, edit, delete, and schedule posts to specific subreddits.
+* **Feature D:** Post Tracking: View and track posts you’ve published across connected Reddit accounts.
 
-- Connect your Reddit account (securely using Reddit's API)
-- Create and save posts
-- Schedule posts to specific subreddits
-- View posting history
-- Manage multiple Reddit accounts (future upgrade)
+## 🏗️ Technical Stack
 
-## Technology Used
+This project is built using the following technologies and frameworks:
 
-- **Python & Django** → Backend framework
-- **PRAW** (Python Reddit API Wrapper) → To talk with Reddit
-- **SQLite / PostgreSQL** → Database to save user posts & accounts
-- **REST API** → So the app can be extended to front-ends or mobile apps
+* **Frontend:** [React (planned), HTML, CSS, JavaScript]
+* **Backend:** [Python, Django, Django REST Framework (DRF)]
+* **Database:** [SQLite (development), PostgreSQL (production-ready)]
+* **Authentication:** [Django Auth, JWT, OAuth 2.0 (via Auth0 & Reddit API)]
 
-## API Endpoints
+---
 
-### Authentication
-- `POST /api/auth/register/` → Create a new user
-- `POST /api/auth/login/` → Login and get an access token
-- `POST /api/auth/logout/` → Logout user
+## 🔗 API Endpoints
 
-### Reddit Account Management
-- `POST /api/reddit/connect/` → Connect a Reddit account (using Reddit API credentials)
-- `GET /api/reddit/accounts/` → List connected accounts
+This section documents the primary endpoints available in the application. All requests should be made to `[http://127.0.0.1:8000/]`.
 
-### Post Management
-- `POST /api/posts/create/` → Create a post (title, content, subreddit)
-- `GET /api/posts/` → View all posts by the user
-- `PUT /api/posts/{id}/` → Edit a post
-- `DELETE /api/posts/{id}/` → Delete a post
+| Category | HTTP Method | Endpoint | Description |
+| :--- | :--- | :--- | :--- |
 
-### Scheduling
-- `POST /api/schedule/` → Schedule a post to go live at a certain time
-- `GET /api/schedule/` → View scheduled posts
+* 🔑 Authentication
 
-## Why This Project?
+| HTTP | Method	| Endpoint	| Description |
+| POST	| /api/auth/signup/	| Registers a new user. |
+| POST	| /api/auth/login/	| Authenticates and logs in a user. |
+| POST	| /api/auth/logout/ |	Logs out the current user. |
 
-Reddit is powerful, but posting regularly can be **time-consuming**. This tool helps by giving you a **single place** to manage posts, accounts, and schedules — making life easier for bloggers, marketers, or anyone active on Reddit.
+* 🦊 Reddit Account Management
+
+| HTTP | Method	| Endpoint	| Description |
+| GET | /api/reddit/accounts/ |	Lists all connected Reddit accounts for the logged-in user. |
+| POST | /api/reddit/connect/ |	Initiates the OAuth flow to connect a new Reddit account. |
+| GET |	/api/reddit/callback/ |	The callback URL for the Reddit OAuth flow. |
+| DELETE |	/api/reddit/disconnect/<id>/ |	Disconnects a specific Reddit account. |
+
+* 📝 Post Management
+
+| HTTP | Method |	Endpoint | Description |
+| GET |	/api/posts/ |	Retrieves a list of all posts for the logged-in user. |
+| POST |	/api/posts/create/ |	Creates a new post with a title, content, subreddit, and a scheduled time. |
+| GET |	/api/posts/posted/ |	Views posts that have already been published. |
+| PUT |	/api/posts/<id>/ |	Updates an existing post. |
+| DELETE |	/api/posts/<id>/ |	Deletes a post. |
+
+---
+
+## 💻 Getting Started
+
+### Prerequisites
+
+* [List any required software, e.g., Django, Python, PRAW]
+
+### Installation
+
+1.  Clone the repository:
+    `git clone https://github.com/your_username/reddit-manager.git`
+2.  Navigate to the project directory:
+    `cd reddit-manager`
+3. Create a virtual environment:
+    `python -m venv venv`
+4. Activate the virtual environment:
+`On Windows: venv\Scripts\activate`
+
+`On macOS/Linux: source venv/bin/activate`
+5.  Install dependencies `requirements.txt`:
+    `pip install -r requirements.txt`
+6.  Apply database migrations:
+    `python manage.py migrate`
+7. Start the development server:
+    `python manage.py runserver`
+
+* The server will be running at http://127.0.0.1:8000/.
+
+---

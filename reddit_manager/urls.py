@@ -4,18 +4,14 @@ from django.shortcuts import render
 
 # Home page view
 def home(request):
-    return render(request, "home.html")  # now points to home.html, not base.html
+    return render(request, "home.html")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", home, name="home"),  # Root URL (homepage)
+    path("", home, name="home"),  # Root URL for homepage
 
-    # Users app routes
-    path("users/", include(("users.urls", "users"), namespace="users")),
-
-    # Posts app routes
-    path("posts/", include(("posts.urls", "posts"), namespace="posts")),
-
-    # Reddit accounts app routes
-    path("reddit/", include(("reddit_accounts.urls", "reddit_accounts"), namespace="reddit_accounts")),
+    # API routes
+    path("api/auth/", include(("users.urls", "users"), namespace="users")),
+    path("api/posts/", include(("posts.urls", "posts"), namespace="posts")),
+    path("api/reddit/", include(("reddit_accounts.urls", "reddit_accounts"), namespace="reddit_accounts")),
 ]
