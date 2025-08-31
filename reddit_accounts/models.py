@@ -15,3 +15,21 @@ class RedditAccount(models.Model):
 
     def __str__(self):
         return f"u/{self.reddit_username}"
+
+
+class OAuthState(models.Model):
+    """Store OAuth state for CSRF protection"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="oauth_states"
+    )
+    state = models.CharField(max_length=255, unique=True)
+    provider = models.CharField(max_length=50)  # 'reddit', 'twitter', etc.
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'state', 'provider']),
+        ]
+    
+    def __str__(self):
+        return f"{self.provider} state for {self.user.username}"

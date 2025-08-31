@@ -1,17 +1,22 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.shortcuts import render
-
-# Home page view
-def home(request):
-    return render(request, "home.html")
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", home, name="home"),  # Root URL for homepage
-
-    # API routes
-    path("api/auth/", include(("users.urls", "users"), namespace="users")),
-    path("api/posts/", include(("posts.urls", "posts"), namespace="posts")),
-    path("api/reddit/", include(("reddit_accounts.urls", "reddit_accounts"), namespace="reddit_accounts")),
+    
+    # JWT Token endpoints
+    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    
+    # Your app API endpoints
+    path("api/auth/", include("users.urls")),  # Assuming you have users.urls for auth
+    path("api/reddit/", include("reddit_accounts.urls")),
+    path("api/posts/", include("posts.urls")),
+    
+    # Keep existing non-API URLs if needed
+    path("reddit/", include("reddit_accounts.urls")),
 ]

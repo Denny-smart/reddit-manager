@@ -1,5 +1,9 @@
+# settings.py
+
 from pathlib import Path
+from datetime import timedelta
 import environ
+import os
 
 # -----------------
 # BASE DIRECTORY
@@ -9,9 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -----------------
 # ENVIRONMENT VARIABLES
 # -----------------
-env = environ.Env(
-    DEBUG=(bool, False)
-)
+env = environ.Env()
 environ.Env.read_env(BASE_DIR / ".env")
 
 SECRET_KEY = env("SECRET_KEY", default="dev-insecure-secret-key")
@@ -28,6 +30,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    # Third-party apps for API functionality
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',
+
+    # Local apps
     'users',
     'reddit_accounts',
     'posts',
@@ -38,6 +47,7 @@ INSTALLED_APPS = [
 # MIDDLEWARE
 # -----------------
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', # Must be at the top
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -47,19 +57,11 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# -----------------
-# URLS & WSGI
-# -----------------
-ROOT_URLCONF = "reddit_manager.urls"
-WSGI_APPLICATION = "reddit_manager.wsgi.application"
 
-# -----------------
-# TEMPLATES
-# -----------------
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],  # global templates folder
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -71,6 +73,48 @@ TEMPLATES = [
         },
     },
 ]
+
+# -----------------
+# URLS & WSGI
+# -----------------
+ROOT_URLCONF = "reddit_manager.urls"
+WSGI_APPLICATION = "reddit_manager.wsgi.application"
+
+# -----------------
+# CORS
+# -----------------
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:8080",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# -----------------
+# DJANGO REST FRAMEWORK
+# -----------------
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
+# -----------------
+# SIMPLE JWT
+# -----------------
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+    "JTI_CLAIM": "jti",
+    "SIGNING_KEY": SECRET_KEY,
+}
 
 # -----------------
 # DATABASE (SQLite for now)
@@ -110,44 +154,16 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+
 # -----------------
 # DEFAULT PRIMARY KEY FIELD
 # -----------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # -----------------
-# DJANGO REST FRAMEWORK
+# REDDIT API CREDENTIALS
 # -----------------
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.BasicAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-}
-
-LOGIN_URL = '/users/login/'
-LOGIN_REDIRECT_URL = "/users/"      # where users go after login
-LOGOUT_REDIRECT_URL = '/login/'  # where users go after logout
-LOGIN_URL = '/login/'
-
-# settings.py
-import os
-from pathlib import Path
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-# super-light .env loader (optional; fine for dev)
-env_file = BASE_DIR / ".env"
-if env_file.exists():
-    for line in env_file.read_text().splitlines():
-        if line.strip() and not line.startswith("#") and "=" in line:
-            k, _, v = line.partition("=")
-            os.environ.setdefault(k.strip(), v.strip())
-
-REDDIT_CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID")
-REDDIT_CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET")
-REDDIT_REDIRECT_URI = os.environ.get("REDDIT_REDIRECT_URI", "http://127.0.0.1:8000/reddit/callback/")
-REDDIT_USER_AGENT = os.environ.get("REDDIT_USER_AGENT", "reddit-manager (by u/kiryke)")
-
+REDDIT_CLIENT_ID = env.str("REDDIT_CLIENT_ID", default=None)
+REDDIT_CLIENT_SECRET = env.str("REDDIT_CLIENT_SECRET", default=None)
+REDDIT_REDIRECT_URI = env.str("REDDIT_REDIRECT_URI", default="http://localhost:8080/reddit/callback")
+REDDIT_USER_AGENT = env.str("REDDIT_USER_AGENT", default="reddit-manager (by u/kiryke)")

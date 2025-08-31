@@ -1,37 +1,35 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth import login, logout
-from django.contrib.auth.decorators import login_required
-from .forms import SignUpForm, LoginForm
+from rest_framework import generics, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from django.contrib.auth import logout
+from django.contrib.auth.models import User
+from .serializers import SignupSerializer, UserSerializer
 
-def signup_view(request):
-    if request.method == "POST":
-        form = SignUpForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect("users:dashboard")
-    else:
-        form = SignUpForm()
-    return render(request, "users/signup.html", {"form": form})
+class SignupView(generics.CreateAPIView):
+    """
+    Handles user signup.
+    """
+    queryset = User.objects.all()
+    serializer_class = SignupSerializer
+    permission_classes = [AllowAny]
 
+class UserDetailView(generics.RetrieveAPIView):
+    """
+    Returns authenticated user details.
+    """
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
 
-def login_view(request):
-    if request.method == "POST":
-        form = LoginForm(data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            return redirect("users:dashboard")
-    else:
-        form = LoginForm()
-    return render(request, "users/login.html", {"form": form})
+    def get_object(self):
+        return self.request.user
 
+class LogoutView(APIView):
+    """
+    Logs out the user.
+    """
+    permission_classes = [IsAuthenticated]
 
-def logout_view(request):
-    logout(request)
-    return redirect("users:login")
-
-
-@login_required
-def dashboard(request):
-    return render(request, "users/dashboard.html")
+    def post(self, request):
+        logout(request)
+        return Response(status=status.HTTP_200_OK)
