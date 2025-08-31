@@ -34,6 +34,7 @@ Base URL:
 | POST   | `/api/auth/signup/` | Register a new user |
 | POST   | `/api/auth/login/` | Authenticate and log in a user |
 | POST   | `/api/auth/logout/` | Log out the current user |
+| GET    | `/api/auth/user/` | Get current user info |
 
 ### 🦊 Reddit Account Management
 | Method | Endpoint | Description |
@@ -49,7 +50,6 @@ Base URL:
 | GET    | `/api/posts/` | Retrieve all posts for the logged-in user |
 | POST   | `/api/posts/create/` | Create a new post with title, content, subreddit, and schedule |
 | GET    | `/api/posts/posted/` | View already published posts |
-| PUT    | `/api/posts/<id>/` | Update an existing post |
 | DELETE | `/api/posts/<id>/` | Delete a post |
 
 ---
