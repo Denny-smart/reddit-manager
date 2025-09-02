@@ -35,6 +35,8 @@ Base URL:
 | POST   | `/api/auth/login/` | Authenticate and log in a user |
 | POST   | `/api/auth/logout/` | Log out the current user |
 | GET    | `/api/auth/user/` | Get current user info |
+| POST   | `/api/token/` | obtain token |
+| POST   | `/api/token/refresh/` | your_refresh_token |
 
 ### 🦊 Reddit Account Management
 | Method | Endpoint | Description |
@@ -55,11 +57,17 @@ Base URL:
 ---
 
 ## 💻 Getting Started
+### Requirements
 
-### ✅ Prerequisites
-- Python (3.x recommended)  
-- Django  
-- PRAW  
+- Python 3.10+
+- Django==5.2.5
+- djangorestframework==3.16.1
+- django-environ==0.12.0
+- praw==7.8.1
+- asgiref==3.9.1
+- sqlparse==0.5.3
+- djangorestframework-simplejwt==5.5.1
+- django-cors-headers==4.7.0
 
 ### ⚙️ Installation
 
