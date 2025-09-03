@@ -115,12 +115,11 @@ Base URL:
 
 3. **Configure Environment Variables:**
    Create a `.env` file in your project root:
-   ```
-   REDDIT_CLIENT_ID=your_client_id
-   REDDIT_CLIENT_SECRET=your_client_secret
-   REDDIT_USER_AGENT=script:RedditManager:v1.0 (by /u/your_username)
-   REDDIT_REDIRECT_URI=http://localhost:8000/api/reddit/callback/
-   ```
+   
+   -REDDIT_CLIENT_ID=your_client_id
+   -REDDIT_CLIENT_SECRET=your_client_secret
+   -REDDIT_USER_AGENT=script:RedditManager:v1.0 (by /u/your_username)
+   -REDDIT_REDIRECT_URI=http://localhost:8000/api/reddit/callback/
 
 4. **Test Your Setup:**
    - Start your server: `python manage.py runserver`
