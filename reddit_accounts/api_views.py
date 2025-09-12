@@ -166,7 +166,7 @@ def connect_reddit(request):
         "redirect_uri": reddit_app['REDIRECT_URI']  # Include for debugging
     })
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 # CRITICAL FIX: Allow unauthenticated access to the callback view
 @permission_classes([AllowAny])
 def reddit_callback(request):
@@ -180,7 +180,8 @@ def reddit_callback(request):
         "app_name": "app1"  # optional, will be looked up from state
     }
     """
-    data = request.data
+    # Get data from either GET or POST request
+    data = request.data if request.method == 'POST' else request.query_params
     
     print(f"Received callback data: {data}")
     print(f"Received state: {data.get('state')}")
