@@ -69,63 +69,99 @@ Base URL:
 - djangorestframework-simplejwt==5.5.1
 - django-cors-headers==4.7.0
 
-### ⚙️ Installation
+---
 
-1. Clone the repository:  
+## ⚙️ Installation
+
+1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your_username/reddit-manager.git
-2.  Navigate to the project directory:
-    ```bash
-    cd reddit-manager
-3. Create a virtual environment:
-    ```bash
-    python -m venv venv
-4. Activate the virtual environment:
-  ```bash
-   On Windows: venv\Scripts\activate
-5.  Install dependencies `requirements.txt`:
-  ```bash
-    pip install -r requirements.txt
-6.  Apply database migrations:
-  ```bash
-    python manage.py migrate
-7. Start the development server:
-  ```bash
-    python manage.py runserver
+   https://github.com/Denny-smart/reddit-manager.git
+   ```
 
-* The server will be running at http://127.0.0.1:8000/.
+2. **Navigate to the project directory:**
+   ```bash
+   cd reddit-manager
+   ```
+
+3. **Create a virtual environment:**
+   ```bash
+   python -m venv venv
+   ```
+
+4. **Activate the virtual environment:**
+   ```bash
+   # On Windows
+   venv\Scripts\activate
+   
+   # On macOS/Linux
+   source venv/bin/activate
+   ```
+
+5. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+6. **Apply database migrations:**
+   ```bash
+   python manage.py migrate
+   ```
+
+7. **Start the development server:**
+   ```bash
+   python manage.py runserver
+   ```
+
+> **Note:** The server will be running at http://127.0.0.1:8000/
+
+---
 
 ## 🔑 Reddit API Setup
 
-1. **Create a Reddit App:**
-   - Go to https://www.reddit.com/prefs/apps
-   - Click "create another app..."
-   - Fill in the following:
-     - Name: `Reddit Manager` (or your preferred name)
-     - Type: select `web app`
-     - Description: Brief description of your app
-     - About URL: Your project URL (optional)
-     - Redirect URI: `http://localhost:8000/api/reddit/callback/`
-   - Click "create app"
+### 1. Create a Reddit App
 
-2. **Get Your Credentials:**
-   - After creating, you'll see:
-     - client_id: under your app name (looks like: YourAppID)
-     - client_secret: listed as 'secret'
+1. Go to [Reddit Apps](https://www.reddit.com/prefs/apps)
+2. Click **"create another app..."**
+3. Fill in the following details:
+   - **Name:** `Reddit Manager` (or your preferred name)
+   - **Type:** Select `web app`
+   - **Description:** Brief description of your app
+   - **About URL:** Your project URL (optional)
+   - **Redirect URI:** `http://localhost:8000/api/reddit/callback/`
+4. Click **"create app"**
 
-3. **Configure Environment Variables:**
-   Create a `.env` file in your project root:
+### 2. Get Your Credentials
+
+After creating the app, note down:
+- **Client ID:** Found under your app name (e.g., `YourAppID`)
+- **Client Secret:** Listed as 'secret'
+
+### 3. Configure Environment Variables
+
+Create a `.env` file in your project root directory:
+
+```env
+REDDIT_CLIENT_ID=your_client_id
+REDDIT_CLIENT_SECRET=your_client_secret
+REDDIT_USER_AGENT=script:RedditManager:v1.0 (by /u/your_username)
+REDDIT_REDIRECT_URI=http://localhost:8000/api/reddit/callback/
+```
+
+### 4. Test Your Setup
+
+1. **Start your server:**
+   ```bash
+   python manage.py runserver
+   ```
+
+2. **Visit the connection endpoint:**
+   ```
+   http://localhost:8000/api/reddit/connect/
+   ```
+
+3. **Verify:** You should be redirected to Reddit's OAuth consent screen
    
-   -REDDIT_CLIENT_ID=your_client_id
-   -REDDIT_CLIENT_SECRET=your_client_secret
-   -REDDIT_USER_AGENT=script:RedditManager:v1.0 (by /u/your_username)
-   -REDDIT_REDIRECT_URI=http://localhost:8000/api/reddit/callback/
 
-4. **Test Your Setup:**
-   - Start your server: `python manage.py runserver`
-   - Visit: `http://localhost:8000/api/reddit/connect/`
-   - You should be redirected to Reddit's OAuth consent screen
+> **📝 Note: You need to be logged into your application to connect a Reddit account.
 
-**Note:** Never commit your `.env` file or share your Reddit API credentials.
-
----
+> **⚠️ Important:** Never commit your `.env` file or share your Reddit API credentials publicly.
