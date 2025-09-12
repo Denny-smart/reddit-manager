@@ -75,7 +75,7 @@ Base URL:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your_username/reddit-manager.git
+   https://github.com/Denny-smart/reddit-manager.git
    ```
 
 2. **Navigate to the project directory:**
