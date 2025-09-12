@@ -160,5 +160,8 @@ REDDIT_REDIRECT_URI=http://localhost:8000/api/reddit/callback/
    ```
 
 3. **Verify:** You should be redirected to Reddit's OAuth consent screen
+   
+
+> **📝 Note: You need to be logged into your application to connect a Reddit account.
 
 > **⚠️ Important:** Never commit your `.env` file or share your Reddit API credentials publicly.
