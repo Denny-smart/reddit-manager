@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 import praw
 from .models import RedditAccount, OAuthState
@@ -167,7 +167,8 @@ def connect_reddit(request):
     })
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+# CRITICAL FIX: Allow unauthenticated access to the callback view
+@permission_classes([AllowAny])
 def reddit_callback(request):
     """
     Process OAuth callback code from Reddit
@@ -183,7 +184,8 @@ def reddit_callback(request):
     
     print(f"Received callback data: {data}")
     print(f"Received state: {data.get('state')}")
-    print(f"Current user: {request.user.username}")
+    # The user is not yet authenticated at this point, so don't access request.user
+    # print(f"Current user: {request.user.username}") 
     
     # Validate required fields
     if not data.get("code") or not data.get("state"):
@@ -193,14 +195,16 @@ def reddit_callback(request):
         )
     
     # Validate state using database storage
+    # NOTE: You will need to look up the user by the state, not request.user
     try:
         oauth_state = OAuthState.objects.get(
-            user=request.user,
             state=data["state"],
             provider='reddit',
             created_at__gte=timezone.now() - timezone.timedelta(minutes=10)  # 10 minute expiry
         )
-        print(f"Found matching state in database: {oauth_state.state}")
+        # Now that we have the state, we can get the associated user
+        user = oauth_state.user
+        print(f"Found matching state in database for user: {user.username}")
         
         # Get the app name from the state record
         app_name = getattr(oauth_state, 'app_identifier', 'app1')
@@ -208,14 +212,6 @@ def reddit_callback(request):
         
     except OAuthState.DoesNotExist:
         print(f"State validation failed! No matching state found in database.")
-        print(f"Looking for state: {data['state']} for user: {request.user.username}")
-        
-        # List all states for this user for debugging
-        user_states = OAuthState.objects.filter(user=request.user, provider='reddit')
-        print(f"User has {user_states.count()} Reddit states:")
-        for state_obj in user_states:
-            print(f"  - State: {state_obj.state}, Age: {timezone.now() - state_obj.created_at}")
-        
         return Response(
             {"error": "State mismatch. Please try again."}, 
             status=status.HTTP_400_BAD_REQUEST
@@ -258,7 +254,7 @@ def reddit_callback(request):
         
         # Save or update the linked account
         account, created = RedditAccount.objects.update_or_create(
-            user=request.user,
+            user=user,
             reddit_username=str(me.name),
             app_identifier=app_name,  # Track which app this account is connected through
             defaults={
