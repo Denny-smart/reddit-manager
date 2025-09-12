@@ -1,7 +1,7 @@
 # 📌 Reddit Manager
 
 A **Reddit Post Manager** that enables users to authenticate their Reddit accounts, create and schedule posts, and manage multiple accounts from a single platform.  
-It simplifies subreddit posting, saves time, and provides better account and post management.
+It simplifies subreddit posting, saves time, and provides better account and post management. Live URL: https://reddit-sync-dash.vercel.app/
 
 ---
 
