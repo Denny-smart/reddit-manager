@@ -3,7 +3,6 @@ from datetime import timedelta
 import environ
 import os
 import dj_database_url
-from django.core.exceptions import ImproperlyConfigured
 
 # -----------------
 # BASE DIRECTORY
@@ -14,12 +13,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ENVIRONMENT VARIABLES
 # -----------------
 env = environ.Env()
-# Read .env file only if it exists and we're in development
-if os.path.exists(BASE_DIR / ".env"):
-    environ.Env.read_env(BASE_DIR / ".env")
+environ.Env.read_env(BASE_DIR / ".env")
 
-# Determine if we're in debug mode from environment
-DEBUG = env.bool("DEBUG", default=False)
+SECRET_KEY = env("SECRET_KEY")
+DEBUG = env.bool("DEBUG")
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) # Set a default empty list to avoid errors
 
 # -----------------
 # INSTALLED APPS
@@ -36,7 +34,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
-    'whitenoise.runserver_nostatic', # WhiteNoise for static files in production
 
     # Local apps
     'users',
@@ -51,13 +48,13 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # Must be at the top
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware", # For serving static files in production
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",  
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'whitenoise.middleware.WhiteNoiseMiddleware', # For production static files
 ]
 
 TEMPLATES = [
@@ -83,6 +80,32 @@ ROOT_URLCONF = "reddit_manager.urls"
 WSGI_APPLICATION = "reddit_manager.wsgi.application"
 
 # -----------------
+# CORS CONFIGURATION
+# -----------------
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:8080",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8080",
+    # This is your Vercel frontend URL, added here for production
+    "https://reddit-sync-dash.vercel.app" 
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# -----------------
+# DJANGO REST FRAMEWORK
+# -----------------
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
+# -----------------
 # SIMPLE JWT CONFIGURATION
 # -----------------
 SIMPLE_JWT = {
@@ -93,82 +116,21 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
     "JTI_CLAIM": "jti",
-    "SIGNING_KEY": os.environ.get("SECRET_KEY", "dev-insecure-secret-key"),
+    "SIGNING_KEY": SECRET_KEY,
     "ROTATE_REFRESH_TOKENS": True, 
     "BLACKLIST_AFTER_ROTATION": True,
 }
 
 # -----------------
-# DEVELOPMENT VS PRODUCTION SETTINGS
+# DATABASE CONFIGURATION
 # -----------------
-if DEBUG:
-    # Development-specific settings
-    print("Running in DEVELOPMENT mode.")
-    SECRET_KEY = env("SECRET_KEY", default="dev-insecure-secret-key")
-    ALLOWED_HOSTS = ['*']
-    CORS_ALLOW_ALL_ORIGINS = True
-    
-    # Use SQLite for development
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
-    
-    # More verbose logging in development
-    LOGGING_LEVEL = "DEBUG"
-    
-    # Do not enforce secure cookies/headers in dev
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
-    SECURE_SSL_REDIRECT = False
-    X_FRAME_OPTIONS = "SAMEORIGIN"
-
-    # CORS configuration for development
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:3000",
-        "http://localhost:8080",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:8080",
-        "https://reddit-sync-dash.vercel.app"
-    ]
-    CORS_ALLOW_CREDENTIALS = True
-    
-else:
-    # Production settings
-    print("Running in PRODUCTION mode.")
-    
-    # SECURITY WARNING: For production, you MUST set a secure SECRET_KEY in env variables.
-    SECRET_KEY = env("SECRET_KEY")
-    if not SECRET_KEY or SECRET_KEY == "dev-insecure-secret-key":
-        raise ImproperlyConfigured("The SECRET_KEY environment variable must be set in production.")
-
-    # SECURITY WARNING: For production, you MUST set ALLOWED_HOSTS.
-    ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
-    if not ALLOWED_HOSTS:
-        raise ImproperlyConfigured("The ALLOWED_HOSTS environment variable must be set in production.")
-
-    # PRODUCTION DATABASE: Use dj-database-url to parse DATABASE_URL
-    DATABASES = {
-        'default': dj_database_url.config(
-            default='sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3'),
-            conn_max_age=600
-        )
-    }
-
-    # SECURE COOKIES AND HEADERS
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = True
-    X_FRAME_OPTIONS = "DENY"
-
-    # CORS CONFIGURATION
-    CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
-    CORS_ALLOW_CREDENTIALS = True
-    
-    # LOGGING
-    LOGGING_LEVEL = "INFO"
+# This will use SQLite in development and PostgreSQL in production
+DATABASES = {
+    'default': dj_database_url.config(
+        default='sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3'),
+        conn_max_age=600
+    )
+}
 
 # -----------------
 # PASSWORD VALIDATION
@@ -194,12 +156,6 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-# Create static directory if it doesn't exist to prevent the warning.
-os.makedirs(STATIC_ROOT, exist_ok=True)
-if STATICFILES_DIRS:
-    os.makedirs(STATICFILES_DIRS[0], exist_ok=True)
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -214,10 +170,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # -----------------
 REDDIT_APPS = {
     'app1': {
-        'CLIENT_ID': env.str("REDDIT_CLIENT_ID_1", default=None),
-        'CLIENT_SECRET': env.str("REDDIT_CLIENT_SECRET_1", default=None),
-        'REDIRECT_URI': env.str("REDDIT_REDIRECT_URI_1", default="http://localhost:8080/reddit/callback/"),
-        'USER_AGENT': env.str("REDDIT_USER_AGENT_1", default="reddit-manager/0.1 by u/kiryke"),
+        'CLIENT_ID': env.str("REDDIT_CLIENT_ID_1"),
+        'CLIENT_SECRET': env.str("REDDIT_CLIENT_SECRET_1"),
+        # Use an environment variable for production, fallback to local
+        'REDIRECT_URI': env.str("REDDIT_REDIRECT_URI_1_PROD", default="http://localhost:8080/reddit/callback/"),
+        'USER_AGENT': env.str("REDDIT_USER_AGENT_1"),
         'DISPLAY_NAME': 'Primary Reddit App (u/kiryke)',
     },
     'app2': {
@@ -227,17 +184,16 @@ REDDIT_APPS = {
         'USER_AGENT': env.str("REDDIT_USER_AGENT_2", default="reddit-manager/0.1 by u/HuckleberryLanky6247"),
         'DISPLAY_NAME': 'Secondary Reddit App (u/HuckleberryLanky6247)',
     },
-    # You can add more Reddit apps here by adding app3, app4, etc.
 }
 
 # -----------------
 # BACKWARD COMPATIBILITY - Legacy Reddit API Settings
 # (Keep existing code working)
 # -----------------
-REDDIT_CLIENT_ID = env.str("REDDIT_CLIENT_ID", default=REDDIT_APPS['app1']['CLIENT_ID'])
-REDDIT_CLIENT_SECRET = env.str("REDDIT_CLIENT_SECRET", default=REDDIT_APPS['app1']['CLIENT_SECRET'])
-REDDIT_REDIRECT_URI = env.str("REDDIT_REDIRECT_URI", default=REDDIT_APPS['app1']['REDIRECT_URI'])
-REDDIT_USER_AGENT = env.str("REDDIT_USER_AGENT", default=REDDIT_APPS['app1']['USER_AGENT'])
+REDDIT_CLIENT_ID = REDDIT_APPS['app1']['CLIENT_ID']
+REDDIT_CLIENT_SECRET = REDDIT_APPS['app1']['CLIENT_SECRET']
+REDDIT_REDIRECT_URI = REDDIT_APPS['app1']['REDIRECT_URI']
+REDDIT_USER_AGENT = REDDIT_APPS['app1']['USER_AGENT']
 
 # -----------------
 # HELPER FUNCTIONS FOR REDDIT APPS
@@ -251,9 +207,12 @@ def get_reddit_app(app_name='app1'):
 def get_available_reddit_apps():
     """
     Get list of all configured Reddit apps.
+    
+    Returns:
+        list: List of tuples (app_key, display_name)
     """
     return [(key, config['DISPLAY_NAME']) for key, config in REDDIT_APPS.items() 
-             if config['CLIENT_ID'] and config['CLIENT_SECRET']]
+            if config['CLIENT_ID'] and config['CLIENT_SECRET']]
 
 def is_reddit_app_configured(app_name):
     """
@@ -298,7 +257,7 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console', 'file'],
-            'level': LOGGING_LEVEL,
+            'level': 'INFO',
             'propagate': False,
         },
         'reddit_accounts': {
@@ -311,3 +270,30 @@ LOGGING = {
 
 # Create logs directory if it doesn't exist
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
+# -----------------
+# DEVELOPMENT VS PRODUCTION SETTINGS
+# -----------------
+if DEBUG:
+    # Development-specific settings
+    CORS_ALLOW_ALL_ORIGINS = True
+    LOGGING['loggers']['django']['level'] = 'DEBUG'
+    ALLOWED_HOSTS = ['*']
+else:
+    # Production settings
+    # Static file serving
+    STATIC_URL = '/static/'
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    
+    # HTTPS and Security Headers
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+    # Force ALLOWED_HOSTS to be set in production
+    if not ALLOWED_HOSTS:
+        raise ValueError("ALLOWED_HOSTS must be set in production environment.")
