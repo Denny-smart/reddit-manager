@@ -68,7 +68,8 @@ def reddit_apps_list(request):
             'app_key': app_key,
             'display_name': display_name,
             'user_agent': reddit_app['USER_AGENT'],
-            'is_configured': is_reddit_app_configured(app_key)
+            'is_configured': is_reddit_app_configured(app_key),
+            'redirect_uri': reddit_app['REDIRECT_URI']  # Added for debugging
         })
     
     return Response({
@@ -142,22 +143,27 @@ def connect_reddit(request):
         app_identifier=app_name  # Store which app this state is for
     )
     
+    reddit_app = get_reddit_app(app_name)
+    
     print(f"Generated state: {state} for app: {app_name}")
+    print(f"Using redirect URI: {reddit_app['REDIRECT_URI']}")
     print(f"Stored state in database for user: {request.user.username}")
     
     # Choose scopes you need
     scopes = ["identity", "read", "submit", "mysubreddits", "history"]
     
-    # Generate auth URL
+    # Generate auth URL - PRAW will use the redirect_uri from the reddit instance
     auth_url = reddit.auth.url(scopes=scopes, state=state, duration="permanent")
     
-    reddit_app = get_reddit_app(app_name)
+    # Log the generated auth URL for debugging
+    print(f"Generated auth URL: {auth_url}")
     
     return Response({
         "auth_url": auth_url,
         "state": state,
         "app_name": app_name,
-        "app_display_name": reddit_app.get('DISPLAY_NAME', f'Reddit App {app_name}')
+        "app_display_name": reddit_app.get('DISPLAY_NAME', f'Reddit App {app_name}'),
+        "redirect_uri": reddit_app['REDIRECT_URI']  # Include for debugging
     })
 
 @api_view(['POST'])
@@ -175,6 +181,7 @@ def reddit_callback(request):
     """
     data = request.data
     
+    print(f"Received callback data: {data}")
     print(f"Received state: {data.get('state')}")
     print(f"Current user: {request.user.username}")
     
@@ -197,10 +204,18 @@ def reddit_callback(request):
         
         # Get the app name from the state record
         app_name = getattr(oauth_state, 'app_identifier', 'app1')
+        print(f"Using app: {app_name}")
         
     except OAuthState.DoesNotExist:
         print(f"State validation failed! No matching state found in database.")
         print(f"Looking for state: {data['state']} for user: {request.user.username}")
+        
+        # List all states for this user for debugging
+        user_states = OAuthState.objects.filter(user=request.user, provider='reddit')
+        print(f"User has {user_states.count()} Reddit states:")
+        for state_obj in user_states:
+            print(f"  - State: {state_obj.state}, Age: {timezone.now() - state_obj.created_at}")
+        
         return Response(
             {"error": "State mismatch. Please try again."}, 
             status=status.HTTP_400_BAD_REQUEST
@@ -208,6 +223,8 @@ def reddit_callback(request):
     
     try:
         reddit = base_reddit(app_name)
+        reddit_app = get_reddit_app(app_name)
+        print(f"Using redirect URI for callback: {reddit_app['REDIRECT_URI']}")
     except ValueError as e:
         return Response(
             {"error": str(e)}, 
@@ -217,7 +234,7 @@ def reddit_callback(request):
     try:
         # Exchange code for refresh_token
         refresh_token = reddit.auth.authorize(data["code"])
-        print(f"Successfully got refresh token for {app_name}: {refresh_token[:10]}...")
+        print(f"Successfully got refresh token for {app_name}: {refresh_token[:10] if refresh_token else 'None'}...")
     except Exception as e:
         print(f"Authorization failed for {app_name}: {str(e)}")
         return Response(

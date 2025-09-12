@@ -168,19 +168,33 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # -----------------
 # MULTIPLE REDDIT APPS CONFIGURATION
 # -----------------
+def get_redirect_uri(app_suffix="1"):
+    """
+    Get the correct redirect URI based on environment.
+    In production, use the production URL. In development, use localhost.
+    """
+    if DEBUG:
+        # Development - use localhost
+        return f"http://localhost:8080/reddit/callback/"
+    else:
+        # Production - use your Render URL
+        return env.str(
+            f"REDDIT_REDIRECT_URI_{app_suffix}_PROD", 
+            default="https://reddit-manager.onrender.com/reddit/callback/"
+        )
+
 REDDIT_APPS = {
     'app1': {
         'CLIENT_ID': env.str("REDDIT_CLIENT_ID_1"),
         'CLIENT_SECRET': env.str("REDDIT_CLIENT_SECRET_1"),
-        # Use an environment variable for production, fallback to local
-        'REDIRECT_URI': env.str("REDDIT_REDIRECT_URI_1_PROD", default="http://localhost:8080/reddit/callback/"),
+        'REDIRECT_URI': get_redirect_uri("1"),
         'USER_AGENT': env.str("REDDIT_USER_AGENT_1"),
         'DISPLAY_NAME': 'Primary Reddit App (u/kiryke)',
     },
     'app2': {
         'CLIENT_ID': env.str("REDDIT_CLIENT_ID_2", default=None),
         'CLIENT_SECRET': env.str("REDDIT_CLIENT_SECRET_2", default=None),
-        'REDIRECT_URI': env.str("REDDIT_REDIRECT_URI_2", default="http://localhost:8080/reddit/callback/"),
+        'REDIRECT_URI': get_redirect_uri("2"),
         'USER_AGENT': env.str("REDDIT_USER_AGENT_2", default="reddit-manager/0.1 by u/HuckleberryLanky6247"),
         'DISPLAY_NAME': 'Secondary Reddit App (u/HuckleberryLanky6247)',
     },
