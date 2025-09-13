@@ -35,7 +35,7 @@ https://reddit-sync-dash.vercel.app/
 ## 🔗 API Endpoints
 
 Base URL:  
-`http://127.0.0.1:8000/`
+`https://reddit-manager.onrender.com/`
 
 ### 🔑 Authentication
 | Method | Endpoint | Description |
