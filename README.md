@@ -3,9 +3,7 @@
 A **Reddit Post Manager** that enables users to authenticate their Reddit accounts, create and schedule posts, and manage multiple accounts from a single platform.  
 It simplifies subreddit posting, saves time, and provides better account and post management. 
 
-## Live Production URLs: 
-- **Backend
-https://reddit-manager.onrender.com/api/auth/signup/
+## Live Production URL:
 
 - **Frontend
 https://reddit-sync-dash.vercel.app/
