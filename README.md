@@ -7,7 +7,7 @@ It simplifies subreddit posting, saves time, and provides better account and pos
 - **Backend
 https://reddit-manager.onrender.com/api/auth/signup/
 
--**Frontend
+- **Frontend
 https://reddit-sync-dash.vercel.app/
 
 
