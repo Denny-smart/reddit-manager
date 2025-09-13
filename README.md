@@ -3,11 +3,10 @@
 A **Reddit Post Manager** that enables users to authenticate their Reddit accounts, create and schedule posts, and manage multiple accounts from a single platform.  
 It simplifies subreddit posting, saves time, and provides better account and post management. 
 
-## Live Production URL:
+## 🚀 Live URLs
 
-- **Frontend
-https://reddit-sync-dash.vercel.app/
-
+- **Frontend:** https://reddit-sync-dash.vercel.app/
+- **Backend API:** https://reddit-manager.onrender.com
 
 
 ---
@@ -23,10 +22,14 @@ https://reddit-sync-dash.vercel.app/
 
 ## 🏗️ Tech Stack
 
-- **Frontend:** React (planned), HTML, CSS, JavaScript  
+- **Frontend:** React, HTML, CSS, Typescript 
 - **Backend:** Python, Django, Django REST Framework (DRF)  
-- **Database:** SQLite (development), PostgreSQL (production-ready)  
-- **Authentication:** Django Auth, JWT, OAuth2.0 (via Auth0 & Reddit API)  
+- **Database:** PostgreSQL
+- **Authentication:** Django Auth, JWT, OAuth2.0
+- **Deployment:** 
+  - Frontend: Vercel
+  - Backend: Render
+  - Database: PostgreSQL (Render) 
 
 ---
 
@@ -42,8 +45,8 @@ https://reddit-manager.onrender.com
 | POST   | `/api/auth/login/` | Authenticate and log in a user |
 | POST   | `/api/auth/logout/` | Log out the current user |
 | GET    | `/api/auth/user/` | Get current user info |
-| POST   | `/api/token/` | obtain token |
-| POST   | `/api/token/refresh/` | your_refresh_token |
+| POST   | `/api/token/` | Obtain JWT token |
+| POST   | `/api/token/refresh/` | Refresh JWT token |
 
 ### 🦊 Reddit Account Management
 | Method | Endpoint | Description |
@@ -56,29 +59,34 @@ https://reddit-manager.onrender.com
 ### 📝 Post Management
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET    | `/api/posts/` | Retrieve all posts for the logged-in user |
-| POST   | `/api/posts/create/` | Create a new post with title, content, subreddit, and schedule |
-| GET    | `/api/posts/posted/` | View already published posts |
+| GET    | `/api/posts/` | List all posts for logged-in user |
+| POST   | `/api/posts/create/` | Create new post |
+| GET    | `/api/posts/<id>/` | Get specific post details |
+| PUT    | `/api/posts/<id>/` | Update existing post |
 | DELETE | `/api/posts/<id>/` | Delete a post |
+| GET    | `/api/posts/posted/` | View published posts |
+| GET    | `/api/posts/scheduled/` | View scheduled posts |
+| POST   | `/api/posts/<id>/publish/` | Publish a specific post |
+| POST   | `/api/posts/<id>/schedule/` | Schedule a post |
 
+### 🔍 Health Check
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET    | `/health/` | Check API health status |
+
+> Note: All endpoints except `/health/` and authentication endpoints require JWT authentication via `Authorization: Bearer <token>` header.
 ---
 
-## 💻 Getting Started
+## 💻 Local Development Setup
+
 ### Requirements
 
 - Python 3.10+
-- Django==5.2.5
-- djangorestframework==3.16.1
-- django-environ==0.12.0
-- praw==7.8.1
-- asgiref==3.9.1
-- sqlparse==0.5.3
-- djangorestframework-simplejwt==5.5.1
-- django-cors-headers==4.7.0
+- PostgreSQL
 
 ---
 
-## ⚙️ Installation
+### Backend Setup
 
 1. **Clone the repository:**
    ```bash
@@ -172,3 +180,19 @@ REDDIT_REDIRECT_URI=http://localhost:8000/api/reddit/callback/
 > **📝 Note: You need to be logged into your application to connect a Reddit account.
 
 > **⚠️ Important:** Never commit your `.env` file or share your Reddit API credentials publicly.
+
+---
+
+## 📝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
