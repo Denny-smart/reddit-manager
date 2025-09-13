@@ -11,6 +11,7 @@ urlpatterns = [
     # Filtered Lists
     path("posted/", api_views.posts_posted, name="api_posted"),
     path("scheduled/", api_views.posts_scheduled, name="api_scheduled"),
+    path("failed/", api_views.posts_failed, name="api_failed"),  # Added failed posts endpoint
     
     # Single Post Operations
     path("<int:pk>/", api_views.posts_detail, name="api_detail"),

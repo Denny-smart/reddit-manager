@@ -37,6 +37,33 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def clean(self):
+        """Validate model fields"""
+        if self.post_now and self.scheduled_time:
+            raise ValidationError({
+                'scheduled_time': 'Cannot set scheduled time when posting now'
+            })
+        
+        if not self.post_now and not self.scheduled_time:
+            raise ValidationError({
+                'scheduled_time': 'Scheduled time is required when not posting now'
+            })
+        
+        if self.scheduled_time and self.scheduled_time <= timezone.now():
+            raise ValidationError({
+                'scheduled_time': 'Scheduled time must be in the future'
+            })
+
+        if len(self.title) > 300:
+            raise ValidationError({
+                'title': 'Title must be 300 characters or less'
+            })
+
+    def save(self, *args, **kwargs):
+        """Override save to run validation"""
+        self.clean()
+        return super().save(*args, **kwargs)
+
     def schedule(self, scheduled_time):
         """Schedule a post for future publication"""
         if scheduled_time <= timezone.now():
@@ -56,11 +83,12 @@ class Post(models.Model):
         try:
             # Note: Actual Reddit posting logic should be in tasks.py
             self.status = self.STATUS_POSTED
+            self.post_now = True
+            self.scheduled_time = None
             self.save()
             return True
         except Exception as e:
-            self.status = self.STATUS_FAILED
-            self.save()
+            self.mark_failed(str(e))
             raise e
 
     def can_publish(self):
@@ -76,6 +104,18 @@ class Post(models.Model):
         """Mark post as failed with optional error message"""
         self.status = self.STATUS_FAILED
         self.save()
+
+    def get_status_display(self):
+        """Get human-readable status"""
+        return dict(self.STATUS_CHOICES).get(self.status, self.status)
+
+    def can_schedule(self):
+        """Check if post can be scheduled"""
+        return self.status in [self.STATUS_PENDING, self.STATUS_FAILED]
+
+    def is_published(self):
+        """Check if post is published"""
+        return self.status == self.STATUS_POSTED
 
     def __str__(self):
         return f"{self.title} ({self.user})"

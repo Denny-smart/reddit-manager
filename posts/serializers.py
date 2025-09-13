@@ -7,6 +7,9 @@ class PostSerializer(serializers.ModelSerializer):
     reddit_account = RedditAccountSerializer(read_only=True)
     reddit_account_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    status_display = serializers.SerializerMethodField()
+    can_publish = serializers.SerializerMethodField()
+    can_schedule = serializers.SerializerMethodField()
     
     class Meta:
         model = Post
@@ -21,6 +24,9 @@ class PostSerializer(serializers.ModelSerializer):
             'post_now',
             'scheduled_time',
             'status',
+            'status_display',
+            'can_publish',
+            'can_schedule',
             'reddit_post_id',
             'reddit_url',
             'created_at',
@@ -32,16 +38,33 @@ class PostSerializer(serializers.ModelSerializer):
             'updated_at', 
             'reddit_post_id', 
             'reddit_url',
-            'status'
+            'status',
+            'status_display',
+            'can_publish',
+            'can_schedule'
         ]
+
+    def get_status_display(self, obj):
+        """Get human-readable status"""
+        return obj.get_status_display()
+
+    def get_can_publish(self, obj):
+        """Check if post can be published"""
+        return obj.status in [Post.STATUS_PENDING, Post.STATUS_FAILED, Post.STATUS_SCHEDULED]
+
+    def get_can_schedule(self, obj):
+        """Check if post can be scheduled"""
+        return obj.status in [Post.STATUS_PENDING, Post.STATUS_FAILED]
 
     def validate_title(self, value):
         """Validate title length for Reddit"""
+        if not value.strip():
+            raise serializers.ValidationError("Title is required")
         if len(value) > 300:
             raise serializers.ValidationError(
                 "Title must be 300 characters or less"
             )
-        return value
+        return value.strip()
 
     def validate_scheduled_time(self, value):
         """Validate scheduled_time is in the future"""
@@ -83,6 +106,12 @@ class PostSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "content": "Content must be 40000 characters or less"
             })
+
+        # Ensure reddit_account_id is provided when needed
+        if post_now and not data.get('reddit_account_id'):
+            raise serializers.ValidationError({
+                "reddit_account_id": "Reddit account is required for immediate posting"
+            })
         
         return data
 
@@ -107,5 +136,9 @@ class PostSerializer(serializers.ModelSerializer):
             elif instance.status == Post.STATUS_SCHEDULED:
                 validated_data['status'] = Post.STATUS_PENDING
                 validated_data['post_now'] = True
+        
+        # Reset failed status if retrying
+        if instance.status == Post.STATUS_FAILED and validated_data.get('post_now'):
+            validated_data['status'] = Post.STATUS_PENDING
         
         return super().update(instance, validated_data)
