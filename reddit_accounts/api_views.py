@@ -29,6 +29,61 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000"  # Keep for local development
 ]
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def reddit_apps_list(request):
+    """List available Reddit apps configuration"""
+    try:
+        available_apps = get_available_reddit_apps()
+        apps_data = []
+        for app_key, display_name in available_apps:
+            reddit_app = get_reddit_app(app_key)
+            apps_data.append({
+                'app_key': app_key,
+                'display_name': display_name,
+                'user_agent': reddit_app['USER_AGENT'],
+                'is_configured': is_reddit_app_configured(app_key),
+                'redirect_uri': reddit_app['REDIRECT_URI']
+            })
+        
+        logger.info(f"Fetched {len(apps_data)} Reddit apps")
+        return Response({
+            'apps': apps_data,
+            'total_apps': len(apps_data)
+        })
+    except Exception as e:
+        logger.error(f"Error fetching Reddit apps list: {str(e)}", exc_info=True)
+        return Response(
+            {"error": "Failed to fetch Reddit apps configuration"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def reddit_accounts_list(request):
+    """List all Reddit accounts for the authenticated user"""
+    try:
+        accounts = RedditAccount.objects.filter(user=request.user).order_by("-created_at")
+        serializer = RedditAccountSerializer(accounts, many=True)
+        
+        accounts_data = serializer.data
+        for account_data in accounts_data:
+            app_key = account_data.get('app_identifier', 'app1')
+            reddit_app = get_reddit_app(app_key)
+            account_data['app_display_name'] = reddit_app.get('DISPLAY_NAME', f'Reddit App {app_key}')
+        
+        logger.info(f"Fetched {len(accounts_data)} Reddit accounts for user: {request.user.username}")
+        return Response({
+            'accounts': accounts_data,
+            'total_accounts': len(accounts_data)
+        })
+    except Exception as e:
+        logger.error(f"Error fetching Reddit accounts list: {str(e)}", exc_info=True)
+        return Response(
+            {"error": "Failed to fetch Reddit accounts"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def reddit_callback(request):
