@@ -35,7 +35,7 @@ https://reddit-sync-dash.vercel.app/
 ## 🔗 API Endpoints
 
 Base URL:  
-`https://reddit-manager.onrender.com/`
+https://reddit-manager.onrender.com
 
 ### 🔑 Authentication
 | Method | Endpoint | Description |
