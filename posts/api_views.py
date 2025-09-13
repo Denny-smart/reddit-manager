@@ -1,5 +1,5 @@
-# posts/api_views.py
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -31,11 +31,9 @@ def posts_create(request):
     
     # Handle Reddit posting
     if post.post_now:
-        # Get Reddit account to use
         reddit_account_id = request.data.get('reddit_account_id')
         
         if reddit_account_id:
-            # Use specified Reddit account
             try:
                 reddit_account = RedditAccount.objects.get(
                     id=reddit_account_id, 
@@ -49,30 +47,26 @@ def posts_create(request):
                     'error': 'Selected Reddit account not found or inactive'
                 }, status=status.HTTP_400_BAD_REQUEST)
         else:
-            # Use default (most recent) Reddit account
             reddit_account = get_default_reddit_account(request.user)
             
             if not reddit_account:
                 post.status = Post.STATUS_FAILED
                 post.save()
                 return Response({
-                    'error': 'No Reddit account connected. Please connect a Reddit account first.'
+                    'error': 'No Reddit account connected'
                 }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Set the Reddit account for the post
         post.reddit_account = reddit_account
         post.save()
         
-        # Attempt to publish to Reddit
         success, error_message = publish_post_to_reddit(post, reddit_account)
         
         if not success:
             return Response({
-                'error': f'Post created but failed to publish to Reddit: {error_message}',
+                'error': f'Post created but failed to publish: {error_message}',
                 'post': PostSerializer(post).data
-            }, status=status.HTTP_207_MULTI_STATUS)  # 207 = partial success
+            }, status=status.HTTP_207_MULTI_STATUS)
     
-    # Return the created post
     return Response(PostSerializer(post).data, status=status.HTTP_201_CREATED)
 
 @api_view(['GET'])
@@ -83,7 +77,18 @@ def posts_posted(request):
         user=request.user, 
         status=Post.STATUS_POSTED
     ).order_by('-created_at')
-    
+    serializer = PostSerializer(posts, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def posts_scheduled(request):
+    """List scheduled posts for the authenticated user"""
+    posts = Post.objects.filter(
+        user=request.user,
+        status=Post.STATUS_SCHEDULED,
+        scheduled_time__gt=timezone.now()
+    ).order_by('scheduled_time')
     serializer = PostSerializer(posts, many=True)
     return Response(serializer.data)
 
@@ -117,12 +122,11 @@ def retry_post(request, pk):
     """Retry posting a failed post to Reddit"""
     post = get_object_or_404(Post, pk=pk, user=request.user)
     
-    if post.status not in [Post.STATUS_FAILED, Post.STATUS_DRAFT]:
+    if post.status not in [Post.STATUS_FAILED, Post.STATUS_PENDING]:
         return Response({
-            'error': 'Can only retry failed or draft posts'
+            'error': 'Can only retry failed or pending posts'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Get Reddit account
     reddit_account = post.reddit_account or get_default_reddit_account(request.user)
     
     if not reddit_account:
@@ -130,11 +134,9 @@ def retry_post(request, pk):
             'error': 'No Reddit account available for posting'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Reset status to pending before attempting
     post.status = Post.STATUS_PENDING
     post.save()
     
-    # Attempt to publish
     success, error_message = publish_post_to_reddit(post, reddit_account)
     
     if success:
@@ -146,4 +148,65 @@ def retry_post(request, pk):
         return Response({
             'error': f'Failed to publish to Reddit: {error_message}',
             'post': PostSerializer(post).data
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def publish_post(request, pk):
+    """Immediately publish a post to Reddit"""
+    post = get_object_or_404(Post, pk=pk, user=request.user)
+    
+    if post.status == Post.STATUS_POSTED:
+        return Response({
+            'error': 'Post is already published'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    reddit_account = post.reddit_account or get_default_reddit_account(request.user)
+    
+    if not reddit_account:
+        return Response({
+            'error': 'No Reddit account available for posting'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    post.post_now = True
+    post.scheduled_time = None
+    post.status = Post.STATUS_PENDING
+    post.save()
+    
+    success, error_message = publish_post_to_reddit(post, reddit_account)
+    
+    if success:
+        return Response({
+            'message': 'Post successfully published to Reddit',
+            'post': PostSerializer(post).data
+        })
+    else:
+        return Response({
+            'error': f'Failed to publish to Reddit: {error_message}',
+            'post': PostSerializer(post).data
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def schedule_post(request, pk):
+    """Schedule a post for future publication"""
+    post = get_object_or_404(Post, pk=pk, user=request.user)
+    
+    scheduled_time = request.data.get('scheduled_time')
+    if not scheduled_time:
+        return Response({
+            'error': 'Scheduled time is required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        post.post_now = False
+        post.schedule(scheduled_time)
+        
+        return Response({
+            'message': 'Post scheduled successfully',
+            'post': PostSerializer(post).data
+        })
+    except ValueError as e:
+        return Response({
+            'error': str(e)
         }, status=status.HTTP_400_BAD_REQUEST)

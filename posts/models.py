@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 User = settings.AUTH_USER_MODEL
 
@@ -35,5 +37,54 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def schedule(self, scheduled_time):
+        """Schedule a post for future publication"""
+        if scheduled_time <= timezone.now():
+            raise ValidationError("Scheduled time must be in the future")
+        
+        self.scheduled_time = scheduled_time
+        self.post_now = False
+        self.status = self.STATUS_SCHEDULED
+        self.save()
+        return self
+
+    def publish(self):
+        """Attempt to publish post to Reddit"""
+        if not self.can_publish():
+            raise ValidationError("Post cannot be published - missing required fields")
+
+        try:
+            # Note: Actual Reddit posting logic should be in tasks.py
+            self.status = self.STATUS_POSTED
+            self.save()
+            return True
+        except Exception as e:
+            self.status = self.STATUS_FAILED
+            self.save()
+            raise e
+
+    def can_publish(self):
+        """Check if post meets requirements for publishing"""
+        return all([
+            self.title,
+            self.reddit_account,
+            self.subreddit,
+            self.status != self.STATUS_POSTED
+        ])
+
+    def mark_failed(self, error_message=None):
+        """Mark post as failed with optional error message"""
+        self.status = self.STATUS_FAILED
+        self.save()
+
     def __str__(self):
         return f"{self.title} ({self.user})"
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'scheduled_time']),
+            models.Index(fields=['user', 'status']),
+        ]
+        verbose_name = 'Post'
+        verbose_name_plural = 'Posts'
