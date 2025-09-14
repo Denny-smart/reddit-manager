@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     # Third-party apps for API functionality
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',  # Added for token blacklisting
     'corsheaders',
 
     # Local apps
@@ -55,7 +56,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'users.middleware.EmailVerificationMiddleware',
+    'users.middleware.EmailVerificationMiddleware',  # Email verification middleware
 ]
 
 TEMPLATES = [
@@ -88,11 +89,19 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:8080",
-    # This is your Vercel frontend URL, added here for production
+    # Production frontend URL
     "https://reddit-sync-dash.vercel.app" 
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# -----------------
+# CSRF CONFIGURATION
+# -----------------
+CSRF_TRUSTED_ORIGINS = [
+    "https://reddit-sync-dash.vercel.app",
+    "https://reddit-manager.onrender.com",
+]
 
 # -----------------
 # DJANGO REST FRAMEWORK
@@ -123,6 +132,12 @@ SIMPLE_JWT = {
 }
 
 # -----------------
+# FRONTEND & BACKEND URLS
+# -----------------
+FRONTEND_URL = env.str('FRONTEND_URL', 'https://reddit-sync-dash.vercel.app' if not DEBUG else 'http://localhost:3000')
+BACKEND_URL = env.str('BACKEND_URL', 'https://reddit-manager.onrender.com' if not DEBUG else 'http://localhost:8000')
+
+# -----------------
 # EMAIL CONFIGURATION
 # -----------------
 if DEBUG:
@@ -144,16 +159,24 @@ else:
     EMAIL_HOST_USER = env.str('EMAIL_HOST_USER')
     EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD')
 
-DEFAULT_FROM_EMAIL = env.str('DEFAULT_FROM_EMAIL', 'noreply@yourdomain.com')
+DEFAULT_FROM_EMAIL = env.str('DEFAULT_FROM_EMAIL', 'ownerkirimi@gmail.com')
 
 # -----------------
 # GOOGLE OAUTH CONFIGURATION
 # -----------------
-GOOGLE_OAUTH2_CLIENT_ID = env.str('GOOGLE_OAUTH2_CLIENT_ID', '')
-GOOGLE_OAUTH2_CLIENT_SECRET = env.str('GOOGLE_OAUTH2_CLIENT_SECRET', '')
+# Updated to use GOOGLE_CLIENT_ID (matching the serializer)
+GOOGLE_CLIENT_ID = env.str('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = env.str('GOOGLE_CLIENT_SECRET', '')
+
+# Legacy variables (for backward compatibility)
+GOOGLE_OAUTH2_CLIENT_ID = GOOGLE_CLIENT_ID
+GOOGLE_OAUTH2_CLIENT_SECRET = GOOGLE_CLIENT_SECRET
 
 # Password reset token expiry (in seconds) - 1 hour default
 PASSWORD_RESET_TIMEOUT = 3600
+
+# Email verification token expiry (in seconds) - 10 minutes default
+EMAIL_VERIFICATION_TIMEOUT = 600  # 10 minutes
 
 # -----------------
 # DATABASE CONFIGURATION
@@ -309,6 +332,11 @@ LOGGING = {
             'propagate': False,
         },
         'reddit_accounts': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'users': {
             'handlers': ['console', 'file'],
             'level': 'INFO',
             'propagate': False,

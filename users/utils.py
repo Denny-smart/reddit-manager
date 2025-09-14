@@ -15,7 +15,7 @@ def generate_reset_token():
     """Generate a secure random token for password reset."""
     return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(32))
 
-def send_password_reset_email(user, reset_token, frontend_url='https://reddit-sync-dash.vercel.app/'):
+def send_password_reset_email(user, reset_token, frontend_url='https://reddit-sync-dash.vercel.app'):
     """
     Send password reset email to user.
     
@@ -24,23 +24,25 @@ def send_password_reset_email(user, reset_token, frontend_url='https://reddit-sy
         reset_token: Password reset token
         frontend_url: Frontend URL for reset link
     """
-    reset_link = f"{frontend_url}/reset-password?token={reset_token}&email={user.email}"
+    reset_link = f"{frontend_url}/reset-password?token={reset_token}"
     
     subject = 'Reset Your Password - Reddit Manager'
     
     # Create HTML email content
     html_message = f"""
     <html>
-    <body>
-        <h2>Password Reset Request</h2>
+    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Reset Your Password</h2>
         <p>Hi {user.username},</p>
         <p>You requested a password reset for your Reddit Manager account.</p>
-        <p>Click the link below to reset your password:</p>
-        <p><a href="{reset_link}" style="background-color: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
+        <p>Click the button below to reset your password:</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{reset_link}" style="background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
+        </div>
         <p>If the button doesn't work, copy and paste this link in your browser:</p>
-        <p>{reset_link}</p>
-        <p>This link will expire in 1 hour.</p>
-        <p>If you didn't request this reset, please ignore this email.</p>
+        <p style="word-break: break-all; color: #666;">{reset_link}</p>
+        <p style="color: #888; font-size: 12px;">This link will expire in 1 hour.</p>
+        <p style="color: #888; font-size: 12px;">If you didn't request this reset, please ignore this email.</p>
         <br>
         <p>Best regards,<br>Reddit Manager Team</p>
     </body>
@@ -48,7 +50,22 @@ def send_password_reset_email(user, reset_token, frontend_url='https://reddit-sy
     """
     
     # Plain text version
-    plain_message = strip_tags(html_message)
+    plain_message = f"""
+    Reset Your Password
+    
+    Hi {user.username},
+    
+    You requested a password reset for your Reddit Manager account.
+    
+    Click this link to reset your password: {reset_link}
+    
+    This link will expire in 1 hour.
+    
+    If you didn't request this reset, please ignore this email.
+    
+    Best regards,
+    Reddit Manager Team
+    """
     
     try:
         send_mail(
@@ -65,7 +82,7 @@ def send_password_reset_email(user, reset_token, frontend_url='https://reddit-sy
         logger.error(f"Failed to send password reset email to {user.email}: {str(e)}")
         return False
 
-def send_verification_email(user, verification_token, frontend_url='https://reddit-sync-dash.vercel.app/'):
+def send_verification_email(user, verification_token, frontend_url='https://reddit-sync-dash.vercel.app'):
     """
     Send email verification email to user.
     
@@ -74,31 +91,48 @@ def send_verification_email(user, verification_token, frontend_url='https://redd
         verification_token: Email verification token
         frontend_url: Frontend URL for verification link
     """
-    verification_link = f"{frontend_url}/verify-email?token={verification_token}&email={user.email}"
+    verification_link = f"{frontend_url}/verify-email?token={verification_token}"
     
     subject = 'Verify Your Email - Reddit Manager'
     
     # Create HTML email content
     html_message = f"""
     <html>
-    <body>
-        <h2>Welcome to Reddit Manager!</h2>
+    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Verify Your Email Address</h2>
         <p>Hi {user.username},</p>
-        <p>Thank you for creating an account with Reddit Manager. To complete your registration, please verify your email address.</p>
+        <p>Thank you for signing up for Reddit Manager! Please verify your email address to complete your registration.</p>
         <p>Click the button below to verify your email:</p>
-        <p><a href="{verification_link}" style="background-color: #28a745; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Email Address</a></p>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{verification_link}" style="background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email Address</a>
+        </div>
         <p>If the button doesn't work, copy and paste this link in your browser:</p>
-        <p>{verification_link}</p>
-        <p>This verification link will expire in 24 hours.</p>
-        <p>If you didn't create this account, please ignore this email.</p>
+        <p style="word-break: break-all; color: #666;">{verification_link}</p>
+        <p style="color: #888; font-size: 12px;">This verification link will expire in 10 minutes.</p>
+        <p style="color: #888; font-size: 12px;">If you didn't create this account, please ignore this email.</p>
         <br>
-        <p>Welcome aboard!<br>Reddit Manager Team</p>
+        <p>Welcome to Reddit Manager!<br>The Reddit Manager Team</p>
     </body>
     </html>
     """
     
     # Plain text version
-    plain_message = strip_tags(html_message)
+    plain_message = f"""
+    Verify Your Email Address
+    
+    Hi {user.username},
+    
+    Thank you for signing up for Reddit Manager! Please verify your email address to complete your registration.
+    
+    Click this link to verify your email: {verification_link}
+    
+    This verification link will expire in 10 minutes.
+    
+    If you didn't create this account, please ignore this email.
+    
+    Welcome to Reddit Manager!
+    The Reddit Manager Team
+    """
     
     try:
         send_mail(
@@ -126,15 +160,17 @@ def verify_google_token(token):
         dict: User info from Google or None if invalid
     """
     try:
-        # Only proceed if Google OAuth is configured
-        if not getattr(settings, 'GOOGLE_OAUTH2_CLIENT_ID', None):
-            logger.error("Google OAuth2 not configured")
+        # Check for Google Client ID (use the updated setting name)
+        google_client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None) or getattr(settings, 'GOOGLE_OAUTH2_CLIENT_ID', None)
+        
+        if not google_client_id:
+            logger.error("Google OAuth not configured - missing GOOGLE_CLIENT_ID")
             return None
             
         idinfo = id_token.verify_oauth2_token(
             token, 
             requests.Request(), 
-            settings.GOOGLE_OAUTH2_CLIENT_ID
+            google_client_id
         )
         
         # Verify the issuer
