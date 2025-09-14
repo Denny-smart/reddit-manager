@@ -44,6 +44,9 @@ https://reddit-manager.onrender.com
 | POST   | `/api/auth/signup/` | Register a new user |
 | POST   | `/api/auth/login/` | Authenticate and log in a user |
 | POST   | `/api/auth/logout/` | Log out the current user |
+| GET    | `/api/auth/password-reset/` | Get current user info |
+| GET    | `/api/auth/password-reset-confirm/` | Get current user info |
+| GET    | `/api/auth/google/` | Get current user info |
 | GET    | `/api/auth/user/` | Get current user info |
 | POST   | `/api/token/` | Obtain JWT token |
 | POST   | `/api/token/refresh/` | Refresh JWT token |
