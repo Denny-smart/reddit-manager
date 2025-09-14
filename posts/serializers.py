@@ -106,12 +106,6 @@ class PostSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "content": "Content must be 40000 characters or less"
             })
-
-        # Ensure reddit_account_id is provided when needed
-        if post_now and not data.get('reddit_account_id'):
-            raise serializers.ValidationError({
-                "reddit_account_id": "Reddit account is required for immediate posting"
-            })
         
         return data
 
