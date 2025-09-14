@@ -65,6 +65,56 @@ def send_password_reset_email(user, reset_token, frontend_url='https://reddit-sy
         logger.error(f"Failed to send password reset email to {user.email}: {str(e)}")
         return False
 
+def send_verification_email(user, verification_token, frontend_url='https://reddit-sync-dash.vercel.app/'):
+    """
+    Send email verification email to user.
+    
+    Args:
+        user: User instance
+        verification_token: Email verification token
+        frontend_url: Frontend URL for verification link
+    """
+    verification_link = f"{frontend_url}/verify-email?token={verification_token}&email={user.email}"
+    
+    subject = 'Verify Your Email - Reddit Manager'
+    
+    # Create HTML email content
+    html_message = f"""
+    <html>
+    <body>
+        <h2>Welcome to Reddit Manager!</h2>
+        <p>Hi {user.username},</p>
+        <p>Thank you for creating an account with Reddit Manager. To complete your registration, please verify your email address.</p>
+        <p>Click the button below to verify your email:</p>
+        <p><a href="{verification_link}" style="background-color: #28a745; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Email Address</a></p>
+        <p>If the button doesn't work, copy and paste this link in your browser:</p>
+        <p>{verification_link}</p>
+        <p>This verification link will expire in 24 hours.</p>
+        <p>If you didn't create this account, please ignore this email.</p>
+        <br>
+        <p>Welcome aboard!<br>Reddit Manager Team</p>
+    </body>
+    </html>
+    """
+    
+    # Plain text version
+    plain_message = strip_tags(html_message)
+    
+    try:
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        logger.info(f"Verification email sent to {user.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send verification email to {user.email}: {str(e)}")
+        return False
+
 def verify_google_token(token):
     """
     Verify Google OAuth token and return user info.
@@ -76,6 +126,11 @@ def verify_google_token(token):
         dict: User info from Google or None if invalid
     """
     try:
+        # Only proceed if Google OAuth is configured
+        if not getattr(settings, 'GOOGLE_OAUTH2_CLIENT_ID', None):
+            logger.error("Google OAuth2 not configured")
+            return None
+            
         idinfo = id_token.verify_oauth2_token(
             token, 
             requests.Request(), 
