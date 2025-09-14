@@ -55,6 +55,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'users.middleware.EmailVerificationMiddleware',
 ]
 
 TEMPLATES = [
@@ -120,6 +121,39 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True, 
     "BLACKLIST_AFTER_ROTATION": True,
 }
+
+# -----------------
+# EMAIL CONFIGURATION
+# -----------------
+if DEBUG:
+    # Development - Console backend (prints emails to console)
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    # Uncomment below and add your Gmail credentials for actual email sending in development
+    # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    # EMAIL_HOST = 'smtp.gmail.com'
+    # EMAIL_PORT = 587
+    # EMAIL_USE_TLS = True
+    # EMAIL_HOST_USER = env.str('EMAIL_HOST_USER', '')
+    # EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD', '')  # Use App Password for Gmail
+else:
+    # Production - Use environment variables
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = env.str('EMAIL_HOST', 'smtp.gmail.com')
+    EMAIL_PORT = env.int('EMAIL_PORT', 587)
+    EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', True)
+    EMAIL_HOST_USER = env.str('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD')
+
+DEFAULT_FROM_EMAIL = env.str('DEFAULT_FROM_EMAIL', 'noreply@yourdomain.com')
+
+# -----------------
+# GOOGLE OAUTH CONFIGURATION
+# -----------------
+GOOGLE_OAUTH2_CLIENT_ID = env.str('GOOGLE_OAUTH2_CLIENT_ID', '')
+GOOGLE_OAUTH2_CLIENT_SECRET = env.str('GOOGLE_OAUTH2_CLIENT_SECRET', '')
+
+# Password reset token expiry (in seconds) - 1 hour default
+PASSWORD_RESET_TIMEOUT = 3600
 
 # -----------------
 # DATABASE CONFIGURATION
