@@ -1,3 +1,4 @@
+# posts/models.py
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -96,29 +97,33 @@ class Post(models.Model):
             errors['scheduled_time'] = 'Scheduled time must be in the future'
 
         # Validate required fields
-        if not self.title.strip():
+        if not self.title or not self.title.strip():
             errors['title'] = 'Title is required'
         elif len(self.title) > 300:
             errors['title'] = 'Title must be 300 characters or less'
 
-        if not self.subreddit.strip():
+        if not self.subreddit or not self.subreddit.strip():
             errors['subreddit'] = 'Subreddit is required'
 
-        # Validate Reddit account for immediate posting
-        if self.post_now and not self.reddit_account_id:
-            errors['reddit_account'] = 'Reddit account is required for immediate posting'
+        # Only validate Reddit account for immediate posting if we're trying to publish
+        # This allows creation without account, but publishing requires account
+        if self.post_now and self.status == self.STATUS_POSTED and not self.reddit_account_id:
+            errors['reddit_account'] = 'Reddit account is required for publishing'
 
         if errors:
             raise ValidationError(errors)
 
-    def save(self, *args, **kwargs):
+    def save(self, skip_clean=False, *args, **kwargs):
         """Override save to run validation and clean data"""
-        self.title = self.title.strip()
-        self.subreddit = self.subreddit.strip().lower()
-        if self.subreddit.startswith('r/'):
-            self.subreddit = self.subreddit[2:]
+        if self.title:
+            self.title = self.title.strip()
+        if self.subreddit:
+            self.subreddit = self.subreddit.strip().lower()
+            if self.subreddit.startswith('r/'):
+                self.subreddit = self.subreddit[2:]
             
-        self.clean()
+        if not skip_clean:
+            self.clean()
         return super().save(*args, **kwargs)
 
     def schedule(self, scheduled_time):
@@ -150,9 +155,9 @@ class Post(models.Model):
     def can_publish(self):
         """Check if post meets requirements for publishing"""
         return all([
-            self.title.strip(),
+            self.title and self.title.strip(),
             self.reddit_account_id,
-            self.subreddit.strip(),
+            self.subreddit and self.subreddit.strip(),
             self.status != self.STATUS_POSTED
         ])
 
@@ -173,6 +178,18 @@ class Post(models.Model):
         """Check if post is published"""
         return self.status == self.STATUS_POSTED
 
+    def get_available_reddit_accounts(self):
+        """Get available Reddit accounts for this post's user"""
+        from reddit_accounts.models import RedditAccount
+        return RedditAccount.objects.filter(
+            user=self.user, 
+            is_active=True
+        ).order_by('-created_at')
+
+    def get_default_reddit_account(self):
+        """Get the default Reddit account for this user"""
+        return self.get_available_reddit_accounts().first()
+
     def __str__(self):
         return f"{self.title} ({self.user})"
 
@@ -186,9 +203,3 @@ class Post(models.Model):
         ]
         verbose_name = 'Post'
         verbose_name_plural = 'Posts'
-        constraints = [
-            models.CheckConstraint(
-                check=Q(scheduled_time__isnull=True) | Q(scheduled_time__gt=timezone.now()),
-                name='scheduled_time_future'
-            )
-        ]

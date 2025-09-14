@@ -1,3 +1,4 @@
+# api_views.py
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
@@ -6,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .models import Post
 from .serializers import PostSerializer
-from .utils import publish_post_to_reddit, get_default_reddit_account
+from .utils import publish_post_to_reddit
 from reddit_accounts.models import RedditAccount
 
 @api_view(['GET'])
@@ -15,7 +16,7 @@ def posts_list(request):
     """List all posts for the authenticated user"""
     try:
         posts = Post.objects.filter(user=request.user).order_by('-created_at')
-        serializer = PostSerializer(posts, many=True)
+        serializer = PostSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data)
     except Exception as e:
         return Response(
@@ -32,7 +33,7 @@ def posts_posted(request):
             user=request.user, 
             status=Post.STATUS_POSTED
         ).order_by('-created_at')
-        serializer = PostSerializer(posts, many=True)
+        serializer = PostSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data)
     except Exception as e:
         return Response(
@@ -50,7 +51,7 @@ def posts_scheduled(request):
             status=Post.STATUS_SCHEDULED,
             scheduled_time__gt=timezone.now()
         ).order_by('scheduled_time')
-        serializer = PostSerializer(posts, many=True)
+        serializer = PostSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data)
     except Exception as e:
         return Response(
@@ -67,11 +68,35 @@ def posts_failed(request):
             user=request.user,
             status=Post.STATUS_FAILED
         ).order_by('-created_at')
-        serializer = PostSerializer(posts, many=True)
+        serializer = PostSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data)
     except Exception as e:
         return Response(
             {'error': 'Failed to fetch failed posts'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def available_reddit_accounts(request):
+    """Get available Reddit accounts for the user"""
+    try:
+        accounts = RedditAccount.objects.filter(
+            user=request.user,
+            is_active=True
+        ).order_by('-created_at')
+        
+        from reddit_accounts.serializers import RedditAccountSerializer
+        serializer = RedditAccountSerializer(accounts, many=True)
+        
+        return Response({
+            'accounts': serializer.data,
+            'count': accounts.count(),
+            'has_accounts': accounts.exists()
+        })
+    except Exception as e:
+        return Response(
+            {'error': 'Failed to fetch Reddit accounts'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -87,46 +112,20 @@ def posts_create(request):
         
         post = serializer.save()
         
-        if post.post_now:
-            reddit_account_id = request.data.get('reddit_account_id')
-            
-            if reddit_account_id:
-                try:
-                    reddit_account = RedditAccount.objects.get(
-                        id=reddit_account_id, 
-                        user=request.user, 
-                        is_active=True
-                    )
-                except RedditAccount.DoesNotExist:
-                    post.status = Post.STATUS_FAILED
-                    post.save()
-                    return Response({
-                        'error': 'Selected Reddit account not found or inactive',
-                        'post': PostSerializer(post).data
-                    }, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                reddit_account = get_default_reddit_account(request.user)
-                
-                if not reddit_account:
-                    post.status = Post.STATUS_FAILED
-                    post.save()
-                    return Response({
-                        'error': 'No Reddit account connected. Please connect an account first.',
-                        'post': PostSerializer(post).data
-                    }, status=status.HTTP_400_BAD_REQUEST)
-            
-            post.reddit_account = reddit_account
-            post.save()
-            
-            success, error_message = publish_post_to_reddit(post, reddit_account)
+        # If post_now is True, attempt to publish immediately
+        if post.post_now and post.reddit_account:
+            success, error_message = publish_post_to_reddit(post, post.reddit_account)
             
             if not success:
                 return Response({
                     'error': f'Post created but failed to publish: {error_message}',
-                    'post': PostSerializer(post).data
+                    'post': PostSerializer(post, context={'request': request}).data
                 }, status=status.HTTP_207_MULTI_STATUS)
         
-        return Response(PostSerializer(post).data, status=status.HTTP_201_CREATED)
+        return Response(
+            PostSerializer(post, context={'request': request}).data, 
+            status=status.HTTP_201_CREATED
+        )
     
     except Exception as e:
         return Response(
@@ -142,14 +141,20 @@ def posts_detail(request, pk):
         post = get_object_or_404(Post, pk=pk, user=request.user)
         
         if request.method == 'GET':
-            serializer = PostSerializer(post)
+            serializer = PostSerializer(post, context={'request': request})
             return Response(serializer.data)
         
         elif request.method == 'PUT':
-            serializer = PostSerializer(post, data=request.data, context={'request': request})
+            serializer = PostSerializer(
+                post, 
+                data=request.data, 
+                context={'request': request}
+            )
             if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
+                updated_post = serializer.save()
+                return Response(
+                    PostSerializer(updated_post, context={'request': request}).data
+                )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         elif request.method == 'DELETE':
@@ -182,9 +187,22 @@ def retry_post(request, pk):
                 'error': 'Can only retry failed or pending posts'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        reddit_account = post.reddit_account or get_default_reddit_account(request.user)
+        # Allow changing Reddit account for retry
+        reddit_account_id = request.data.get('reddit_account_id')
+        if reddit_account_id:
+            try:
+                reddit_account = RedditAccount.objects.get(
+                    id=reddit_account_id,
+                    user=request.user,
+                    is_active=True
+                )
+                post.reddit_account = reddit_account
+            except RedditAccount.DoesNotExist:
+                return Response({
+                    'error': 'Selected Reddit account not found or inactive'
+                }, status=status.HTTP_400_BAD_REQUEST)
         
-        if not reddit_account:
+        if not post.reddit_account:
             return Response({
                 'error': 'No Reddit account available for posting'
             }, status=status.HTTP_400_BAD_REQUEST)
@@ -192,17 +210,17 @@ def retry_post(request, pk):
         post.status = Post.STATUS_PENDING
         post.save()
         
-        success, error_message = publish_post_to_reddit(post, reddit_account)
+        success, error_message = publish_post_to_reddit(post, post.reddit_account)
         
         if success:
             return Response({
                 'message': 'Post successfully published to Reddit',
-                'post': PostSerializer(post).data
+                'post': PostSerializer(post, context={'request': request}).data
             })
         else:
             return Response({
                 'error': f'Failed to publish to Reddit: {error_message}',
-                'post': PostSerializer(post).data
+                'post': PostSerializer(post, context={'request': request}).data
             }, status=status.HTTP_400_BAD_REQUEST)
     
     except Post.DoesNotExist:
@@ -228,29 +246,51 @@ def publish_post(request, pk):
                 'error': 'Post is already published'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        reddit_account = post.reddit_account or get_default_reddit_account(request.user)
+        # Allow specifying Reddit account for publishing
+        reddit_account_id = request.data.get('reddit_account_id')
+        if reddit_account_id:
+            try:
+                reddit_account = RedditAccount.objects.get(
+                    id=reddit_account_id,
+                    user=request.user,
+                    is_active=True
+                )
+                post.reddit_account = reddit_account
+            except RedditAccount.DoesNotExist:
+                return Response({
+                    'error': 'Selected Reddit account not found or inactive'
+                }, status=status.HTTP_400_BAD_REQUEST)
         
-        if not reddit_account:
-            return Response({
-                'error': 'No Reddit account available for posting'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if not post.reddit_account:
+            # Try to use default account
+            default_account = RedditAccount.objects.filter(
+                user=request.user,
+                is_active=True
+            ).order_by('-created_at').first()
+            
+            if not default_account:
+                return Response({
+                    'error': 'No Reddit account available for posting'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            post.reddit_account = default_account
         
         post.post_now = True
         post.scheduled_time = None
         post.status = Post.STATUS_PENDING
         post.save()
         
-        success, error_message = publish_post_to_reddit(post, reddit_account)
+        success, error_message = publish_post_to_reddit(post, post.reddit_account)
         
         if success:
             return Response({
                 'message': 'Post successfully published to Reddit',
-                'post': PostSerializer(post).data
+                'post': PostSerializer(post, context={'request': request}).data
             })
         else:
             return Response({
                 'error': f'Failed to publish to Reddit: {error_message}',
-                'post': PostSerializer(post).data
+                'post': PostSerializer(post, context={'request': request}).data
             }, status=status.HTTP_400_BAD_REQUEST)
     
     except Post.DoesNotExist:
@@ -290,12 +330,27 @@ def schedule_post(request, pk):
                 'error': 'Invalid datetime format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Allow specifying Reddit account for scheduled post
+        reddit_account_id = request.data.get('reddit_account_id')
+        if reddit_account_id:
+            try:
+                reddit_account = RedditAccount.objects.get(
+                    id=reddit_account_id,
+                    user=request.user,
+                    is_active=True
+                )
+                post.reddit_account = reddit_account
+            except RedditAccount.DoesNotExist:
+                return Response({
+                    'error': 'Selected Reddit account not found or inactive'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
         post.post_now = False
         post.schedule(scheduled_time)
         
         return Response({
             'message': 'Post scheduled successfully',
-            'post': PostSerializer(post).data
+            'post': PostSerializer(post, context={'request': request}).data
         })
         
     except Post.DoesNotExist:
