@@ -86,7 +86,6 @@ https://reddit-manager.onrender.com
 
 ### Requirements
 
-- Python 3.10+
 - PostgreSQL
 
 ---
