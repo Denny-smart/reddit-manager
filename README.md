@@ -44,11 +44,11 @@ https://reddit-manager.onrender.com
 | POST   | `/api/auth/signup/` | Register a new user |
 | POST   | `/api/auth/login/` | Authenticate and log in a user |
 | POST   | `/api/auth/logout/` | Log out the current user |
-| GET    |`/api/auth/verify-email/` | send email verification when creating an account|
-| GET    |`/api/auth/resend-verification/` | rensend mail verification|
-| GET    |`/api/auth/password-reset/` | Password reset|
-| GET    |`/api/auth/password-reset-confirm/` | Confirm password reset|
-| GET    | `/api/auth/google/` | sign up & login with google|
+| POST    |`/api/auth/verify-email/` | send email verification when creating an account|
+| POST    |`/api/auth/resend-verification/` | rensend mail verification|
+| POST   |`/api/auth/password-reset/` | Password reset|
+| POST     |`/api/auth/password-reset-confirm/` | Confirm password reset|
+| POST    | `/api/auth/google/` | sign up & login with google|
 | GET    | `/api/auth/user/` | Get current user info |
 | POST   | `/api/token/` | Obtain JWT token |
 | POST   | `/api/token/refresh/` | Refresh JWT token |
