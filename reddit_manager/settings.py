@@ -107,13 +107,33 @@ WSGI_APPLICATION = "reddit_manager.wsgi.application"
 # -----------------
 # DATABASE CONFIGURATION
 # -----------------
-DATABASES = {
-    'default': dj_database_url.config(
-        default=env.str('DATABASE_URL', 'sqlite:///' + str(BASE_DIR / 'db.sqlite3')),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+database_url = env.str('DATABASE_URL', default='')
+
+if database_url and database_url.strip():
+    # Production - use the provided DATABASE_URL
+    try:
+        DATABASES = {
+            'default': dj_database_url.parse(database_url)
+        }
+        # Add production optimizations
+        if not DEBUG:
+            DATABASES['default']['CONN_MAX_AGE'] = 600
+            DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+    except Exception as e:
+        print(f"Error parsing DATABASE_URL: {e}")
+        # This should not happen in production, but provides a fallback
+        raise ValueError(f"Invalid DATABASE_URL configuration: {e}")
+else:
+    # Development - use SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+            'OPTIONS': {
+                'timeout': 300,
+            }
+        }
+    }
 
 # -----------------
 # CORS CONFIGURATION
