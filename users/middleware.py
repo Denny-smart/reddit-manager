@@ -16,15 +16,17 @@ class EmailVerificationMiddleware(MiddlewareMixin):
     
     # Endpoints that do not require email verification.
     EXEMPT_PATHS = [
-        '/users/signup/',
-        '/users/login/',
-        '/users/verify-email/',
-        '/users/resend-verification/',
-        '/users/password-reset/',
-        '/users/password-reset-confirm/',
-        '/users/google/',
-        '/api/token/',
-        '/api/token/refresh/',
+        '/api/auth/signup/',                    # Fixed path
+        '/api/auth/login/',                     # Fixed path
+        '/api/auth/verify-email/',              # Fixed path
+        '/api/auth/resend-verification/',       # Fixed path
+        '/api/auth/password-reset/',            # Fixed path
+        '/api/auth/password-reset-confirm/',    # Fixed path
+        '/api/auth/google/',                    # Fixed path
+        '/api/auth/token/',                     # JWT token endpoints
+        '/api/auth/token/refresh/',             # JWT refresh endpoint
+        '/health/',                             # Health check
+        '/admin/',                              # Django admin
     ]
     
     def process_request(self, request):
